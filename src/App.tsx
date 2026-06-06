@@ -9,6 +9,7 @@ import PrivateRoute from './components/dashboard/PrivateRoute'
 // Code splitting: Dashboard y Login se cargan solo cuando se necesitan
 const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/Login'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
 // Loading mínimo entre lazy chunks
@@ -30,6 +31,7 @@ export default function App() {
 
           {/* Autenticación */}
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Dashboard protegido — sub-rutas manejadas dentro de Dashboard.tsx */}
           <Route element={<PrivateRoute />}>
