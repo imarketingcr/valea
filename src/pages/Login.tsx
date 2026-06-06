@@ -37,7 +37,11 @@ export default function Login() {
     })
 
     if (resetError) {
-      setError('No se pudo enviar el correo. Intenta de nuevo.')
+      if (resetError.message.toLowerCase().includes('rate limit') || resetError.status === 429) {
+        setError('Demasiados intentos. Espera unos minutos antes de volver a intentarlo.')
+      } else {
+        setError(`No se pudo enviar el correo: ${resetError.message}`)
+      }
     } else {
       setResetSent(true)
     }
