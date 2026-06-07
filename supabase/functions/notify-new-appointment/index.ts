@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ interface AppointmentRecord {
   notes?: string
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   cancelled_by?: 'client' | 'clinic'
+  outlook_event_id?: string
   confirmation_number?: string
 }
 
@@ -178,13 +180,49 @@ async function createOutlookCalendarEvent(appt: AppointmentRecord): Promise<void
       }
     )
 
-    if (!res.ok) console.error('[Outlook] Error al crear evento:', res.status, await res.text())
-    else {
+    if (!res.ok) {
+      console.error('[Outlook] Error al crear evento:', res.status, await res.text())
+    } else {
       const data = await res.json()
       console.log('[Outlook] Evento creado:', data.id)
+      // Persist event ID so we can delete it later on cancellation
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      )
+      const { error: dbErr } = await supabase
+        .from('appointments')
+        .update({ outlook_event_id: data.id })
+        .eq('id', appt.id)
+      if (dbErr) console.error('[Outlook] Error guardando event ID:', dbErr.message)
     }
   } catch (err) {
     console.error('[Outlook] Error inesperado:', err)
+  }
+}
+
+async function deleteOutlookCalendarEvent(eventId: string): Promise<void> {
+  const userEmail = Deno.env.get('OUTLOOK_CALENDAR_USER_EMAIL')
+  if (!userEmail) return
+
+  const accessToken = await getMicrosoftAccessToken()
+  if (!accessToken) return
+
+  try {
+    const res = await fetch(
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(userEmail)}/events/${encodeURIComponent(eventId)}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    )
+    if (res.status === 204 || res.status === 404) {
+      console.log('[Outlook] Evento eliminado:', eventId)
+    } else {
+      console.error('[Outlook] Error eliminando evento:', res.status, await res.text())
+    }
+  } catch (err) {
+    console.error('[Outlook] Error inesperado al eliminar:', err)
   }
 }
 
@@ -594,16 +632,24 @@ serve(async (req: Request) => {
   } else if (
     payload.type === 'UPDATE' &&
     payload.old_record?.status !== 'cancelled' &&
-    appt.status === 'cancelled' &&
-    appt.cancelled_by === 'clinic'
+    appt.status === 'cancelled'
   ) {
-    // Doctora canceló la cita → notificar al cliente
-    console.log(`[notify] UPDATE cancelled by clinic — ${appt.confirmation_number} — ${appt.patient_name}`)
+    console.log(`[notify] UPDATE cancelled (by ${appt.cancelled_by ?? 'unknown'}) — ${appt.confirmation_number} — ${appt.patient_name}`)
 
-    tasks.push(
-      sendCancellationEmailToClient(appt).catch(e => console.error('[notify] Error email cancelación:', e)),
-      sendCancellationWhatsAppToClient(appt).catch(e => console.error('[notify] Error WhatsApp cancelación:', e)),
-    )
+    // Remove calendar event regardless of who cancelled
+    if (appt.outlook_event_id) {
+      tasks.push(
+        deleteOutlookCalendarEvent(appt.outlook_event_id).catch(e => console.error('[notify] Error eliminando Outlook:', e)),
+      )
+    }
+
+    // Only send client notification when the clinic cancelled
+    if (appt.cancelled_by === 'clinic') {
+      tasks.push(
+        sendCancellationEmailToClient(appt).catch(e => console.error('[notify] Error email cancelación:', e)),
+        sendCancellationWhatsAppToClient(appt).catch(e => console.error('[notify] Error WhatsApp cancelación:', e)),
+      )
+    }
 
   } else {
     return new Response('OK — evento ignorado', { status: 200 })

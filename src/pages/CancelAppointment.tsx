@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { formatDisplayTime } from '../lib/utils'
 
-type PageState = 'loading' | 'not_found' | 'already_cancelled' | 'already_completed' | 'ready' | 'confirming' | 'cancelled' | 'error'
+type PageState = 'loading' | 'not_found' | 'already_cancelled' | 'already_completed' | 'ready' | 'confirming' | 'rescheduling' | 'cancelled' | 'error'
 
 interface ApptSummary {
   patient_name: string
@@ -41,15 +41,31 @@ export default function CancelAppointment() {
       })
   }, [id])
 
+  const cancelAppointment = async () => {
+    const { error } = await supabase.rpc('cancel_appointment_by_client', { p_id: id })
+    if (error) throw error
+  }
+
   const handleCancel = async () => {
     setCancelling(true)
-    const { error } = await supabase.rpc('cancel_appointment_by_client', { p_id: id })
-    if (error) {
-      setState('error')
-    } else {
+    try {
+      await cancelAppointment()
       setState('cancelled')
+    } catch {
+      setState('error')
+    } finally {
+      setCancelling(false)
     }
-    setCancelling(false)
+  }
+
+  const handleReschedule = async () => {
+    setState('rescheduling')
+    try {
+      await cancelAppointment()
+    } catch {
+      // Even if cancellation fails, let them book a new appointment
+    }
+    window.location.href = '/#booking'
   }
 
   const formatDate = (d: string) =>
@@ -64,9 +80,12 @@ export default function CancelAppointment() {
         </div>
 
         <div className="bg-brand-lino p-8">
-          {state === 'loading' && (
-            <div className="text-center py-8">
+          {(state === 'loading' || state === 'rescheduling') && (
+            <div className="text-center py-8 space-y-3">
               <div className="w-6 h-6 border-2 border-brand-blue border-t-transparent rounded-full animate-spin mx-auto" />
+              {state === 'rescheduling' && (
+                <p className="font-opensans text-xs text-brand-bruma">Preparando tu reagendamiento…</p>
+              )}
             </div>
           )}
 
@@ -189,12 +208,13 @@ export default function CancelAppointment() {
                   </div>
 
                   <div className="space-y-3">
-                    <a
-                      href="/#booking"
-                      className="block bg-brand-blue text-brand-lino font-opensans text-xs tracking-widest uppercase py-3 text-center hover:bg-brand-tierra transition-colors duration-300"
+                    <button
+                      type="button"
+                      onClick={handleReschedule}
+                      className="w-full bg-brand-blue text-brand-lino font-opensans text-xs tracking-widest uppercase py-3 text-center hover:bg-brand-tierra transition-colors duration-300 cursor-pointer"
                     >
                       Reagendar mi cita →
-                    </a>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setState('confirming')}

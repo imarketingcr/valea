@@ -16,7 +16,7 @@ export interface Appointment {
   notes?: string
   status?: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   cancelled_by?: 'client' | 'clinic'
-  google_event_id?: string
+  outlook_event_id?: string
   confirmation_number?: string
 }
 
