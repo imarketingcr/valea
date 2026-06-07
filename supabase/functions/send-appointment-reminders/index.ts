@@ -62,6 +62,8 @@ async function sendTwilioWhatsApp(to: string, body: string): Promise<void> {
   if (!accountSid || !authToken || !from) return
 
   try {
+    const cleanFrom = from.replace(/^whatsapp:/i, '')
+    const cleanTo = to.replace(/^whatsapp:/i, '')
     const credentials = btoa(`${accountSid}:${authToken}`)
     const res = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -72,8 +74,8 @@ async function sendTwilioWhatsApp(to: string, body: string): Promise<void> {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          From: `whatsapp:${from}`,
-          To: `whatsapp:${to}`,
+          From: `whatsapp:${cleanFrom}`,
+          To: `whatsapp:${cleanTo}`,
           Body: body,
         }),
       }
