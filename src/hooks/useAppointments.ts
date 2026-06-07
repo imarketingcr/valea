@@ -34,15 +34,22 @@ export function useAppointments() {
     fetchAppointments()
   }, [fetchAppointments])
 
-  const updateStatus = async (id: string, status: Appointment['status']) => {
+  const updateStatus = async (
+    id: string,
+    status: Appointment['status'],
+    cancelledBy?: 'client' | 'clinic',
+  ) => {
+    const patch: Partial<Appointment> = { status }
+    if (status === 'cancelled' && cancelledBy) patch.cancelled_by = cancelledBy
+
     const { error: err } = await supabase
       .from('appointments')
-      .update({ status })
+      .update(patch)
       .eq('id', id)
 
     if (err) throw err
     setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status } : a))
+      prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
     )
   }
 

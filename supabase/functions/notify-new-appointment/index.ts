@@ -12,6 +12,7 @@ interface AppointmentRecord {
   appointment_time: string
   notes?: string
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  cancelled_by?: 'client' | 'clinic'
   confirmation_number?: string
 }
 
@@ -278,6 +279,13 @@ async function sendClientEmail(appt: AppointmentRecord): Promise<void> {
       &nbsp;·&nbsp;
       <a href="mailto:info@valeacr.com" style="color:#1C4BA7;text-decoration:none;">📧 info@valeacr.com</a>
     </p>
+    ${isConfirmed ? `
+    <p style="margin:20px 0 0;">
+      <a href="https://valeacr.com/cancelar?id=${appt.id}"
+         style="font-family:'Open Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#929471;text-decoration:underline;">
+        ¿Necesitas cancelar? Haz clic aquí
+      </a>
+    </p>` : ''}
   </td></tr>`
 
   const html = emailWrapper(content, clinicName, doctorName)
@@ -389,6 +397,8 @@ async function sendClientWhatsApp(appt: AppointmentRecord): Promise<void> {
         ``,
         `Recuerda llegar 10 minutos antes. ¡Te esperamos!`,
         `📍 VALEA Aesthetics — Alajuela, Costa Rica`,
+        ``,
+        `¿Necesitas cancelar? https://valeacr.com/cancelar?id=${appt.id}`,
       ].join('\n')
     : [
         `📋 *Solicitud Recibida — VALEA Aesthetics*`,
@@ -430,6 +440,100 @@ async function sendDoctorWhatsApp(appt: AppointmentRecord): Promise<void> {
   ].join('\n')
 
   await sendTwilioWhatsApp(doctorPhone, message)
+}
+
+// ─── Cancellation notifications ────────────────────────────────────────────────
+
+async function sendCancellationEmailToClient(appt: AppointmentRecord): Promise<void> {
+  const apiKey = Deno.env.get('RESEND_API_KEY')
+  const fromEmail = Deno.env.get('FROM_EMAIL') ?? 'notificaciones@valeacr.com'
+  const clinicName = Deno.env.get('CLINIC_NAME') ?? 'VALEA Aesthetics'
+  const doctorName = Deno.env.get('DOCTOR_NAME') ?? 'Dra. Carolina Castillo Rodas'
+
+  if (!apiKey || !appt.email) return
+
+  const fecha = formatDate(appt.appointment_date)
+  const hora = formatTime(appt.appointment_time)
+  const firstName = appt.patient_name.split(' ')[0]
+
+  const content = `
+  <tr><td style="padding:36px 40px 0;text-align:center;">
+    <span style="font-size:44px;">😔</span>
+    <h1 style="margin:16px 0 0;color:#1C4BA7;font-family:Georgia,serif;font-size:24px;font-weight:300;letter-spacing:2px;">
+      Cita Cancelada
+    </h1>
+    <p style="margin:10px 0 0;color:#8B6D53;font-size:14px;line-height:1.6;">
+      Hola <strong>${firstName}</strong>, lamentamos informarte que tuvimos que cancelar tu cita.
+    </p>
+  </td></tr>
+  <tr><td style="padding:20px 40px;">
+    <div style="background:#FFF8E1;border-left:3px solid #FFC107;padding:14px 18px;">
+      <p style="margin:0;color:#7B5B2A;font-size:13px;line-height:1.7;">
+        Entendemos que esto puede ser un inconveniente y pedimos disculpas. Surgió un imprevisto
+        que nos obliga a cancelar la cita del <strong>${fecha} a las ${hora}</strong>.
+      </p>
+    </div>
+  </td></tr>
+  <tr><td style="padding:0 40px 12px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #D1BAA6;border-collapse:collapse;">
+      ${detailRows([
+        ['💉 Servicio', appt.service],
+        ['📅 Fecha', fecha],
+        ['⏰ Hora', hora],
+        ['🔖 Ref', `#${appt.confirmation_number ?? '—'}`],
+      ])}
+    </table>
+  </td></tr>
+  <tr><td style="padding:20px 40px 32px;text-align:center;">
+    <p style="margin:0 0 20px;color:#8B6D53;font-size:13px;line-height:1.6;">
+      Te invitamos a reagendar tu cita. Tenemos disponibilidad próxima y nos encantaría atenderte.
+    </p>
+    <a href="https://valeacr.com/#booking"
+       style="display:inline-block;background:#1C4BA7;color:#FAF9F6;font-family:'Open Sans',Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:14px 28px;text-decoration:none;">
+      Reagendar mi cita →
+    </a>
+    <p style="margin:20px 0 0;color:#8B6D53;font-size:12px;">
+      O contáctanos: <a href="tel:+50670278704" style="color:#1C4BA7;text-decoration:none;">📞 7027-8704</a>
+    </p>
+  </td></tr>`
+
+  const html = emailWrapper(content, clinicName, doctorName)
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${clinicName} <${fromEmail}>`,
+      to: [appt.email],
+      subject: `Cita cancelada — ${clinicName} (${fecha})`,
+      html,
+    }),
+  })
+
+  if (!res.ok) console.error('[Resend] Error email cancelación cliente:', res.status, await res.text())
+  else console.log('[Resend] Email cancelación enviado al cliente:', appt.email)
+}
+
+async function sendCancellationWhatsAppToClient(appt: AppointmentRecord): Promise<void> {
+  const phone = normalizePhone(appt.phone)
+  if (!phone) return
+
+  const fecha = formatDate(appt.appointment_date)
+  const hora = formatTime(appt.appointment_time)
+  const firstName = appt.patient_name.split(' ')[0]
+
+  const message = [
+    `😔 *VALEA Aesthetics — Cita Cancelada*`,
+    ``,
+    `Hola ${firstName}, lamentamos informarte que tuvimos que cancelar tu cita del *${fecha} a las ${hora}*.`,
+    ``,
+    `Pedimos disculpas por el inconveniente. Te invitamos a reagendar a la fecha más cercana.`,
+    ``,
+    `📅 *Reagendar:* https://valeacr.com/#booking`,
+    `📞 *Tel:* 7027-8704`,
+  ].join('\n')
+
+  await sendTwilioWhatsApp(phone, message)
 }
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
@@ -485,6 +589,20 @@ serve(async (req: Request) => {
       sendClientEmail(appt).catch(e => console.error('[notify] Error email confirmación:', e)),
       sendClientWhatsApp(appt).catch(e => console.error('[notify] Error WhatsApp confirmación:', e)),
       createOutlookCalendarEvent(appt).catch(e => console.error('[notify] Error Outlook confirmación:', e)),
+    )
+
+  } else if (
+    payload.type === 'UPDATE' &&
+    payload.old_record?.status !== 'cancelled' &&
+    appt.status === 'cancelled' &&
+    appt.cancelled_by === 'clinic'
+  ) {
+    // Doctora canceló la cita → notificar al cliente
+    console.log(`[notify] UPDATE cancelled by clinic — ${appt.confirmation_number} — ${appt.patient_name}`)
+
+    tasks.push(
+      sendCancellationEmailToClient(appt).catch(e => console.error('[notify] Error email cancelación:', e)),
+      sendCancellationWhatsAppToClient(appt).catch(e => console.error('[notify] Error WhatsApp cancelación:', e)),
     )
 
   } else {

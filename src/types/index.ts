@@ -15,6 +15,7 @@ export interface Appointment {
   appointment_time: string       // TIME → 'HH:MM'
   notes?: string
   status?: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  cancelled_by?: 'client' | 'clinic'
   google_event_id?: string
   confirmation_number?: string
 }
