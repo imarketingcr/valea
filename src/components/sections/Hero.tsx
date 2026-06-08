@@ -130,8 +130,11 @@ export default function Hero() {
               >
                 {/* Si hay imagen de hero, se muestra; sino el gradiente */}
                 <img
-                  src="/flores.jpg"
+                  src="https://res.cloudinary.com/dkpfptjvm/image/upload/f_auto,q_auto/v1780903156/flores_abpwce.jpg"
                   alt="VALEA Aesthetics — Clínica Estética"
+                  width="1920"
+                  height="1280"
+                  fetchPriority="high"
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                 />
