@@ -38,8 +38,10 @@ export default function DashboardLayout() {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-brand-lino/10">
         <img
-          src="/logo_claro_transparente.svg"
+          src="https://res.cloudinary.com/dkpfptjvm/image/upload/v1780903156/logo_claro_transparente_uc22dn.svg"
           alt="VALEA Aesthetics"
+          width="83"
+          height="160"
           className="h-40 object-contain"
         />
       </div>
@@ -139,8 +141,10 @@ export default function DashboardLayout() {
             <Menu size={22} strokeWidth={1.5} />
           </button>
           <img
-            src="/logo_oscuro_transparente.svg"
+            src="https://res.cloudinary.com/dkpfptjvm/image/upload/v1780903156/logo_oscuro_transparente_bc5i1j.svg"
             alt="VALEA Aesthetics"
+            width="23"
+            height="40"
             className="h-10 object-contain"
           />
         </header>

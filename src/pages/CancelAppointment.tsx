@@ -76,7 +76,7 @@ export default function CancelAppointment() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-10">
-          <img src="/logo_claro_transparente.svg" alt="VALEA Aesthetics" className="h-20 object-contain" />
+          <img src="https://res.cloudinary.com/dkpfptjvm/image/upload/v1780903156/logo_claro_transparente_uc22dn.svg" alt="VALEA Aesthetics" width="42" height="80" className="h-20 object-contain" />
         </div>
 
         <div className="bg-brand-lino p-8">

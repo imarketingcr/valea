@@ -55,8 +55,10 @@ export default function Header() {
             onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
           >
             <img
-              src="/logo_oscuro_transparente.svg"
+              src="https://res.cloudinary.com/dkpfptjvm/image/upload/v1780903156/logo_oscuro_transparente_bc5i1j.svg"
               alt="VALEA Aesthetics"
+              width="36"
+              height="64"
               className={cn(
                 'transition-all duration-500 object-contain',
                 isScrolled ? 'h-14' : 'h-16'
@@ -131,8 +133,10 @@ export default function Header() {
         >
           <div className="flex items-center justify-between px-6 py-6 border-b border-brand-bruma/30">
             <img
-              src="/logo_oscuro_transparente.svg"
+              src="https://res.cloudinary.com/dkpfptjvm/image/upload/v1780903156/logo_oscuro_transparente_bc5i1j.svg"
               alt="VALEA Aesthetics"
+              width="32"
+              height="56"
               className="h-14 object-contain"
             />
             <button
