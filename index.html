@@ -29,10 +29,17 @@
 
     <title>VALEA Aesthetics — Clínica Estética Médica</title>
 
-    <!-- Google Fonts -->
+    <!-- LCP image preload — makes Cloudinary hero discoverable before JS runs -->
+    <link rel="preload" as="image" href="https://res.cloudinary.com/dkpfptjvm/image/upload/f_auto,q_auto/v1780903156/flores_abpwce.jpg" fetchpriority="high" />
+
+    <!-- Google Fonts — non-blocking via media="print" trick -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Open+Sans:wght@300;400;500;600&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Open+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
